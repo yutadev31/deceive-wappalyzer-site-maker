@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
-import json
-import os
 import re
+import requests
 
-INPUT_DIR = "wappalyzer/src/technologies/"
+base_url = "https://raw.githubusercontent.com/dochne/wappalyzer/main/src/technologies/"
 
-data = []
-
-input_files = os.listdir(INPUT_DIR)
-for file in input_files:
-  with open(INPUT_DIR + file, "r") as f:
-    f_data = json.load(f)
-    keys = f_data.keys()
-    for key in keys:
-      data.append(f_data[key])
-
+# 不要な文字を置換する関数
 def replace_chars(s: str):
   s = s.replace("[0-9]", "1")
   s = s.replace("[0-9.]", "1")
@@ -36,71 +26,75 @@ def replace_chars(s: str):
   s = s.replace(".*", "aa")
   s = s.replace("あ", "?")
 
-  if (s.find("\n") != -1):
-    print(s)
-    exit(1)
-
   return s
 
 def proc_dom(s: str):
   return
 
+data = None
 html = ""
+cookies = []
 err = ""
 
-cookies = []
+target_files = list("abcdefghijklmnopqrstuvwxyz_")
+for letter in target_files:
+  url = f"{base_url}{letter}.json"
+  try:
+    response = requests.get(url)
+    if response.status_code != 200:
+      print(f"Failed to fetch: {url}")
+      continue
+    data = response.json()
+  except Exception as e:
+    print(f"Error fetching/parsing {url}: {e}")
+    continue
 
-for item in data:
-  if "scriptSrc" in item:
-    try:
-      scriptSrc: str = item["scriptSrc"]
-
-      if type(scriptSrc) == str:
-        html += "<script src=\"" + replace_chars(scriptSrc) + "\"></script>\n"
-      else:
-        for src in x["scriptSrc"]:
-          html += "<script src=\"" + replace_chars(scriptSrc) + "\"></script>\n"
-    except:
-      err += "scriptSrc: " + key + "\n"
-  if "meta" in item:
-    try:
-      meta = item["meta"]
-
-      meta_keys = meta.keys()
-      for meta_key in meta_keys:
-        html += "<meta name=\"" + meta_key + "\" content=\"" + replace_chars(meta[meta_key]) + "\" />\n"
-    except:
-      err += "meta: " + key + "\n"
-  if "cookies" in item:
-    try:
-      i_cookies = item["cookies"]
-      cookies_keys = i_cookies.keys()
-      for cookies_key in cookies_keys:
-        c = i_cookies[cookies_key]
-        if c == "":
-          cookies.append(cookies_key + "=" + "cookies")
-        else:
-          cookies.append(cookies_key + "=" + replace_chars(c))
-    except:
-      err += "cookies: " + key + "\n"
-  if "dom" in item:
-    try:
-      dom = item["dom"]
-      if type(dom) == str:
-        doms = x["dom"].split(",")
-        for dom in doms:
-          dom = dom.strip()
-      elif type(dom) == list:
-        for dom_item in dom:
-          doms = dom_item.split(",")
-          for dom in doms:
-            dom = dom.strip()
-    except:
-      err += "dom: " + key + "\n"
+  for key, item in data.items():
+    if "scriptSrc" in item:
+      try:
+        scriptSrc = item["scriptSrc"]
+        if isinstance(scriptSrc, str):
+          html += f"<script src=\"{replace_chars(scriptSrc)}\" type='text/fake'></script>\n"
+        elif isinstance(scriptSrc, list):
+          for src in scriptSrc:
+            html += f"<script src=\"{replace_chars(src)}\"></script>\n"
+      except Exception:
+        err += f"scriptSrc: {key}\n"
+    if "meta" in item:
+      try:
+        meta = item["meta"]
+        for meta_key, meta_value in meta.items():
+          if isinstance(meta_value, str):
+            html += f"<meta name=\"{meta_key}\" content=\"{replace_chars(meta_value)}\" />\n"
+      except Exception:
+        err += f"meta: {key}\n"
+    if "cookies" in item:
+      try:
+        cookies_data = item["cookies"]
+        for cookie_key, cookie_value in cookies_data.items():
+          cookies.append(f"{cookie_key}={replace_chars(cookie_value or 'cookies')}")
+      except Exception:
+        err += f"cookies: {key}\n"
+    if "dom" in item:
+      try:
+        dom = item["dom"]
+        if isinstance(dom, str):
+          doms = dom.split(",")
+          for dom_item in doms:
+            html += f"<div>{dom_item.strip()}</div>\n"
+        elif isinstance(dom, list):
+          for dom_item in dom:
+            doms = dom_item.split(",")
+            for dom_item in doms:
+              html += f"<div>{dom_item.strip()}</div>\n"
+      except Exception:
+        err += f"dom: {key}\n"
 
 cookies_js = "; ".join(cookies)
 
-html += "<script>document.cookie = \"" + cookies_js + "\"</script>"
+html += f"<script>document.cookie = \"{cookies_js}\"</script>"
 
-with open("out/index.html", "w") as f:
+with open("index.html", "w") as f:
   f.write(html)
+
+print("HTMLファイルを生成しました。")
