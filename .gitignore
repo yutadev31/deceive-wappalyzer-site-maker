@@ -1,4 +1,5 @@
 out
 wappalyzer
 .venv
+*.log
 index.html
