@@ -33,7 +33,7 @@ def convert_selector_to_html(selector: str):
   selector = selector.replace("*", "").replace("^", "").replace("'", "").replace("\\","")
 
   # タグ名だけの場合
-  if re.match(r'^[a-zA-Z-]+$', selector):  # 単一のタグ名
+  if re.match(r'^[a-zA-Z0-9-]+$', selector):  # 単一のタグ名
     return f'<{selector}></{selector}>'
 
   # IDが指定された場合 (例: #id)
@@ -125,6 +125,12 @@ for letter in target_files:
         elif isinstance(dom, list):
           for dom_item in dom:
             doms = dom_item.split(",")
+            for dom_item in doms:
+              html += f"{convert_selector_to_html(dom_item.strip())}\n"
+        elif isinstance(dom, dict):
+          dom_keys = dom.keys()
+          for dom_key in dom_keys:
+            doms = dom_key.split(",")
             for dom_item in doms:
               html += f"{convert_selector_to_html(dom_item.strip())}\n"
       except Exception:
