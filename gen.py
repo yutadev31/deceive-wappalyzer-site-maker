@@ -29,35 +29,47 @@ def replace_chars(s: str):
   return s
 
 def convert_selector_to_html(selector: str):
-  selector = selector.replace("*", "")
+  # 不要な文字を削除
+  selector = selector.replace("*", "").replace("^", "").replace("'", "").replace("\\","")
+
   # タグ名だけの場合
-  if re.match(r'^[a-zA-Z]+$', selector):  # 単一のタグ名
+  if re.match(r'^[a-zA-Z-]+$', selector):  # 単一のタグ名
     return f'<{selector}></{selector}>'
 
-  # IDが指定された場合 (例: div#id)
-  if re.match(r'^[a-zA-Z0-9]+#[a-zA-Z0-9-]+$', selector):  # div#id形式
+  # IDが指定された場合 (例: #id)
+  if re.match(r'^#[a-zA-Z0-9-_]+$', selector):  # ID形式
+    id_ = selector[1:]  # 先頭の#を削除
+    return f'<div id="{id_}"></div>'
+
+  # タグ名とIDが指定された場合 (例: div#id)
+  if re.match(r'^[a-zA-Z0-9-]+#[a-zA-Z0-9-_]+$', selector):  # div#id形式
     tag, id_ = selector.split('#')
     return f'<{tag} id="{id_}"></{tag}>'
 
   # クラスが指定された場合 (例: .class)
-  if re.match(r'^\.[a-zA-Z0-9-]+$', selector):  # .class形式
+  if re.match(r'^\.[a-zA-Z0-9\-\_]+$', selector):  # .class形式
     class_ = selector[1:]  # 先頭の.を削除
     return f'<div class="{class_}"></div>'
 
-  # クラス指定とタグ名が指定された場合 (例: div.class)
-  if re.match(r'^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9-]+)+$', selector):  # div.class形式
+  # タグ名とクラスが指定された場合 (例: div.class)
+  if re.match(r'^[a-zA-Z0-9\-]+\.[a-zA-Z0-9-_]+$', selector):  # div.class形式
     tag, class_ = selector.split('.')
     return f'<{tag} class="{class_}"></{tag}>'
 
   # 属性が指定された場合 (例: div[attr=value])
-  if re.match(r'^[a-zA-Z0-9]+(?:\[[a-zA-Z0-9-]+=.*\])+$', selector):  # div[attr=value]形式
+  if re.match(r'^[a-zA-Z0-9\-]*\[[^\]]*\](\[[^\]]*\])*$', selector):  # div[attr=value]形式
     # タグ名と属性部分を分ける
-    tag = selector.split('[')[0]
+
+    tag = selector.split('[')[0].strip()
+    if selector[0] == '[':
+      tag = "div"
     # 属性部分を抽出
     attrs = re.findall(r'\[([^\]]+)\]', selector)
     # 属性を処理
-    attributes = ' '.join([f'{attr.split("=")[0]}="{attr.split("=")[1]}"' for attr in attrs])
+    attributes = ' '.join([f'{attr.split("=")[0]}="{attr.split("=")[1]}"' if '=' in attr else f'{attr}' for attr in attrs])
     return f'<{tag} {attributes}></{tag}>'
+
+  print(selector)
 
 data = None
 html = ""
