@@ -116,7 +116,7 @@ for letter in target_files:
       except Exception:
         err += f"cookies: {key}\n"
     if "dom" in item:
-      # try:
+      try:
         dom = item["dom"]
         if isinstance(dom, str):
           doms = dom.split(",")
@@ -127,8 +127,8 @@ for letter in target_files:
             doms = dom_item.split(",")
             for dom_item in doms:
               html += f"{convert_selector_to_html(dom_item.strip())}\n"
-      # except Exception:
-      #   err += f"dom: {key}\n"
+      except Exception:
+        err += f"dom: {key}\n"
 
 cookies_js = "; ".join(cookies)
 
